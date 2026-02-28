@@ -269,6 +269,8 @@ export type ChannelThreadingToolContext = {
    * not forwarding/relaying a message from another conversation.
    */
   skipCrossContextDecoration?: boolean;
+  /** Resolved account ID (UID) for user-specific tool operations (e.g. OAuth tokens). */
+  agentAccountId?: string;
 };
 
 export type ChannelMessagingAdapter = {

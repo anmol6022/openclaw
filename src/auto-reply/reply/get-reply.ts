@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,
@@ -101,8 +102,15 @@ export async function getReplyFromConfig(
   }
 
   const workspaceDirRaw = resolveAgentWorkspaceDir(cfg, agentId) ?? DEFAULT_AGENT_WORKSPACE_DIR;
+
+  // Workspace Isolation logic: Append user ID to workspace directory if available
+  const senderId = ctx.SenderId || ctx.SenderE164 || ctx.SenderUsername;
+  const userWorkspaceDirRaw = senderId
+    ? path.join(workspaceDirRaw, `user-${senderId}`)
+    : workspaceDirRaw;
+
   const workspace = await ensureAgentWorkspace({
-    dir: workspaceDirRaw,
+    dir: userWorkspaceDirRaw,
     ensureBootstrapFiles: !agentCfg?.skipBootstrap && !isFastTestEnv,
   });
   const workspaceDir = workspace.dir;

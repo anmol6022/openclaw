@@ -17,6 +17,7 @@ import {
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
+import { getRagService } from "../../rag/rag-service.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
 import { hasControlCommand } from "../command-detection.js";
@@ -264,15 +265,30 @@ export async function runPreparedReply(
       })
     : "";
   const groupSystemPrompt = sessionCtx.GroupSystemPrompt?.trim() ?? "";
+  const baseBody = sessionCtx.BodyStripped ?? sessionCtx.Body ?? "";
+
+  // RAG Integration: Query for related documents
+  const ragService = getRagService(cfg);
+  const ragContext = await ragService.queryDocuments(ctx.AccountId || "default", baseBody, 3);
+
+  const ragSystemPrompt =
+    ragContext !== "No documents indexed yet." &&
+    ragContext !== "No relevant information found in documents."
+      ? `\n\n[RELEVANT RAG CONTEXT]\n${ragContext}\n[/RELEVANT RAG CONTEXT]`
+      : "";
+
   const inboundMetaPrompt = buildInboundMetaSystemPrompt(
     isNewSession ? sessionCtx : { ...sessionCtx, ThreadStarterBody: undefined },
   );
-  const extraSystemPrompt = [inboundMetaPrompt, groupChatContext, groupIntro, groupSystemPrompt]
+  const extraSystemPrompt = [
+    inboundMetaPrompt,
+    groupChatContext,
+    groupIntro,
+    groupSystemPrompt,
+    ragSystemPrompt,
+  ]
     .filter(Boolean)
     .join("\n\n");
-  const baseBody = sessionCtx.BodyStripped ?? sessionCtx.Body ?? "";
-  // Use CommandBody/RawBody for bare reset detection (clean message without structural context).
-  const rawBodyTrimmed = (ctx.CommandBody ?? ctx.RawBody ?? ctx.Body ?? "").trim();
   const baseBodyTrimmedRaw = baseBody.trim();
   if (
     allowTextCommands &&

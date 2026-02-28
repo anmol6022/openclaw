@@ -23,6 +23,7 @@ import { danger, logVerbose, warn } from "../globals.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { MediaFetchError } from "../media/fetch.js";
 import { readChannelAllowFromStore } from "../pairing/pairing-store.js";
+import { getRagService } from "../rag/rag-service.js";
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
@@ -969,6 +970,30 @@ export const registerTelegramHandlers = ({
           },
         ]
       : [];
+
+    // RAG Integration: Index text media directly after downloading
+    if (
+      media &&
+      media.contentType &&
+      (media.contentType.startsWith("text/") || media.contentType === "application/pdf")
+    ) {
+      try {
+        const ragService = getRagService(cfg);
+        const resolvedPath = media.path.startsWith("~") ? resolveUserPath(media.path) : media.path;
+        const fs = await import("node:fs/promises");
+        const content = await fs.readFile(resolvedPath, "utf-8");
+        await ragService.indexDocument(accountId || "default", content, {
+          source: "telegram",
+          filename: media.path,
+        });
+        await bot.api.sendMessage(chatId, `✅ Indexed document into your knowledge base.`, {
+          reply_to_message_id: msg.message_id,
+        });
+      } catch (err) {
+        logger.warn({ chatId, error: String(err) }, "Failed to index media for RAG");
+      }
+    }
+
     const senderId = msg.from?.id ? String(msg.from.id) : "";
     const conversationKey =
       resolvedThreadId != null ? `${chatId}:topic:${resolvedThreadId}` : String(chatId);

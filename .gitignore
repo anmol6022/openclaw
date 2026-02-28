@@ -120,3 +120,10 @@ dist/protocol.schema.json
 
 # Synthing
 **/.stfolder/
+
+# OpenClaw Sensitive Data (Workspaces, Tokens, Databases)
+.openclaw/
+.clawhub/
+*.sqlite
+.oauth-tokens.json
+**/workspace-user-*

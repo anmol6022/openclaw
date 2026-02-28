@@ -881,6 +881,15 @@ export function buildNvidiaProvider(): ProviderConfig {
         contextWindow: 8192,
         maxTokens: 2048,
       },
+      {
+        id: "z-ai/glm5",
+        name: "GLM-5",
+        reasoning: true,
+        input: ["text"],
+        cost: NVIDIA_DEFAULT_COST,
+        contextWindow: 16384,
+        maxTokens: 16384,
+      },
     ],
   };
 }

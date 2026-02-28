@@ -1,0 +1,12 @@
+{
+  "name": "@openclaw/confirmation-hook",
+  "version": "2026.2.26",
+  "private": true,
+  "description": "Requires user confirmation for sensitive tool actions",
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -657,7 +657,8 @@ export function createMessageTool(options?: MessageToolOptions): AnyAgentTool {
         options?.currentThreadTs ||
         hasCurrentMessageId ||
         options?.replyToMode ||
-        options?.hasRepliedRef
+        options?.hasRepliedRef ||
+        agentAccountId
           ? {
               currentChannelId: options?.currentChannelId,
               currentChannelProvider: options?.currentChannelProvider,
@@ -665,6 +666,7 @@ export function createMessageTool(options?: MessageToolOptions): AnyAgentTool {
               currentMessageId: options?.currentMessageId,
               replyToMode: options?.replyToMode,
               hasRepliedRef: options?.hasRepliedRef,
+              agentAccountId,
               // Direct tool invocations should not add cross-context decoration.
               // The agent is composing a message, not forwarding from another chat.
               skipCrossContextDecoration: true,

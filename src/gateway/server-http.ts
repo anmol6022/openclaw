@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
   createServer as createHttpServer,
   type Server as HttpServer,
@@ -5,9 +6,12 @@ import {
   type ServerResponse,
 } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
+import path from "node:path";
 import type { TlsOptions } from "node:tls";
+import { fileURLToPath } from "node:url";
 import type { WebSocketServer } from "ws";
 import { resolveAgentAvatar } from "../agents/identity-avatar.js";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 import {
   A2UI_PATH,
   CANVAS_HOST_PATH,
@@ -612,6 +616,94 @@ export function createGatewayHttpServer(opts: {
             root: controlUiRoot,
           })
         ) {
+          return;
+        }
+      }
+
+      const urlObj = new URL(req.url ?? "/", "http://localhost");
+
+      // Handle the Onboarding page Custom Web UI
+      if (urlObj.pathname === "/onboard") {
+        try {
+          const __dirname = path.dirname(fileURLToPath(import.meta.url));
+          const onboardPath = path.resolve(__dirname, "onboard-page.html");
+          const html = fs.readFileSync(onboardPath, "utf8");
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.end(html);
+          return;
+        } catch {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end("Failed to load onboard page");
+          return;
+        }
+      }
+
+      // Handle OAuth Redirects / Callbacks
+      if (urlObj.pathname === "/auth/google" || urlObj.pathname === "/auth/slack") {
+        const service = urlObj.pathname === "/auth/google" ? "google" : "slack";
+        const code = urlObj.searchParams.get("code");
+        const state = urlObj.searchParams.get("state"); // Expecting JSON or uid
+
+        if (code) {
+          // Successfully returned from OAuth provider
+          // In a real flow, we'd exchange code for token here.
+          // For now, we persist the "code" as the token to demonstrate storage.
+
+          let uid = state || "unknown";
+          try {
+            // If state is JSON, parse it
+            if (state?.startsWith("{")) {
+              const parsed = JSON.parse(state);
+              uid = parsed.uid || uid;
+            }
+          } catch {
+            /* ignore */
+          }
+
+          const workspaceBase = resolveDefaultAgentWorkspaceDir();
+          const userWorkspace = path.join(workspaceBase, `workspace-user-${uid}`);
+          const tokenPath = path.join(userWorkspace, ".oauth-tokens.json");
+
+          try {
+            if (!fs.existsSync(userWorkspace)) {
+              fs.mkdirSync(userWorkspace, { recursive: true });
+            }
+
+            let tokens: Record<string, unknown> = {};
+            if (fs.existsSync(tokenPath)) {
+              tokens = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
+            }
+
+            tokens[service] = {
+              access_token: `MOCK_ACCESS_TOKEN_${code}`,
+              refresh_token: `MOCK_REFRESH_TOKEN_${code}`,
+              expiry: Date.now() + 3600000,
+              updatedAt: new Date().toISOString(),
+            };
+
+            fs.writeFileSync(tokenPath, JSON.stringify(tokens, null, 2));
+
+            res.statusCode = 302;
+            res.setHeader("Location", `/onboard?status=success&service=${service}&uid=${uid}`);
+            res.end();
+          } catch {
+            res.statusCode = 302;
+            res.setHeader("Location", `/onboard?status=error&service=${service}&uid=${uid}`);
+            res.end();
+          }
+          return;
+        } else {
+          // Redirect to external Google / Slack
+          // We pass the uid from our own query params into the 'state'
+          const uid = urlObj.searchParams.get("uid") || "anonymous";
+          const stateParam = encodeURIComponent(JSON.stringify({ uid }));
+
+          // Mock redirect to provider with state
+          res.statusCode = 302;
+          res.setHeader("Location", `/auth/${service}?code=MOCK_AUTH_CODE&state=${stateParam}`);
+          res.end();
           return;
         }
       }

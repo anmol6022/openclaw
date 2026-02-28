@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect OpenClaw</title>
+  <style>
+    :root {
+      --bg: #0d0d12;
+      --card-bg: #1a1a24;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: #2d2d39;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --google: #ffffff;
+      --google-text: #3c4043;
+      --slack: #4a154b;
+      --slack-text: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at bottom left, rgba(74, 21, 75, 0.15) 0%, transparent 40%);
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      padding: 3rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1.5rem;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary), #ec4899);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+    }
+
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .btn:hover::after {
+      opacity: 1;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn img,
+    .btn svg {
+      width: 24px;
+      height: 24px;
+      margin-right: 0.75rem;
+    }
+
+    .btn-google {
+      background-color: var(--google);
+      color: var(--google-text);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-slack {
+      background-color: var(--slack);
+      color: var(--slack-text);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background-color: var(--border);
+    }
+
+    .divider::before {
+      margin-right: 1rem;
+    }
+
+    .divider::after {
+      margin-left: 1rem;
+    }
+
+    .status {
+      margin-top: 1.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      display: none;
+    }
+
+    .status.success {
+      display: block;
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+    }
+
+    .status.error {
+      display: block;
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="logo">OC</div>
+    <h1>Connect OpenClaw</h1>
+    <p>Authorize OpenClaw to access your team tools and start collaborating your way.</p>
+
+    <div id="status-message" class="status"></div>
+
+    <a href="/auth/google" class="btn btn-google">
+      <svg viewBox="0 0 48 48">
+        <title>Google Logo</title>
+        <clipPath id="g">
+          <path
+            d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" />
+        </clipPath>
+        <g class="colors" clip-path="url(#g)">
+          <path fill="#FBBC05" d="M0 37V11l17 13z" />
+          <path fill="#EA4335" d="M0 11l17 13 7-6.1L48 14V0H0z" />
+          <path fill="#34A853" d="M0 37l30-23 7.9 1L48 0v48H0z" />
+          <path fill="#4285F4" d="M48 48L17 24l-4-3 35-10z" />
+        </g>
+      </svg>
+      Connect with Google
+    </a>
+
+    <div class="divider">or</div>
+
+    <a href="/auth/slack" class="btn btn-slack">
+      <svg viewBox="0 0 24.8 24.8">
+        <path
+          d="M5.3 15.3c-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4 2.4-1.1 2.4-2.4v-2.4H5.3zm1.2-1.2h6.1c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4-2.4 1.1-2.4 2.4v2.4h-3.7V6.5c0-1.3-1.1-2.4-2.4-2.4S1.7 5.2 1.7 6.5s1.1 2.4 2.4 2.4h2.4v5.2zm8 4.2h3.7v6.1c0 1.3 1.1 2.4 2.4 2.4s2.4-1.1 2.4-2.4-1.1-2.4-2.4-2.4h-6.1v-3.7c0-1.3-1.1-2.4-2.4-2.4s-2.4 1.1-2.4 2.4 1.1 2.4 2.4 2.4h2.4zm4.8-11.8c1.3 0 2.4-1.1 2.4-2.4s-1.1-2.4-2.4-2.4-2.4 1.1-2.4 2.4v2.4h2.4z" />
+      </svg>
+      Connect with Slack
+    </a>
+  </div>
+
+  <script>
+    // Handle status messages from OAuth callbacks
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const service = urlParams.get('service');
+    const uid = urlParams.get('uid');
+
+    // Append uid to auth links if present
+    if (uid) {
+      document.querySelectorAll('.btn').forEach(btn => {
+        const url = new URL(btn.getAttribute('href'), window.location.origin);
+        url.searchParams.set('uid', uid);
+        btn.href = url.toString();
+      });
+    }
+
+    if (status && service) {
+      const statusEl = document.getElementById('status-message');
+      const serviceName = service.charAt(0).toUpperCase() + service.slice(1);
+
+      if (status === 'success') {
+        statusEl.textContent = `Successfully connected to ${serviceName}! (User Index: ${uid || 'saved'})`;
+        statusEl.className = 'status success';
+      } else if (status === 'error') {
+        statusEl.textContent = `Failed to connect to ${serviceName}. Please try again.`;
+        statusEl.className = 'status error';
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 import { normalizeChatType } from "../channels/chat-type.js";
 import { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
 import type { OpenClawConfig } from "../config/config.js";
@@ -6,7 +9,7 @@ import { resolveAccountEntry } from "../routing/account-lookup.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
 import { resolveSlackAppToken, resolveSlackBotToken } from "./token.js";
 
-export type SlackTokenSource = "env" | "config" | "none";
+export type SlackTokenSource = "env" | "config" | "user" | "none";
 
 export type ResolvedSlackAccount = {
   accountId: string;
@@ -52,6 +55,7 @@ function mergeSlackAccountConfig(cfg: OpenClawConfig, accountId: string): SlackA
 export function resolveSlackAccount(params: {
   cfg: OpenClawConfig;
   accountId?: string | null;
+  uid?: string | null;
 }): ResolvedSlackAccount {
   const accountId = normalizeAccountId(params.accountId);
   const baseEnabled = params.cfg.channels?.slack?.enabled !== false;
@@ -59,13 +63,38 @@ export function resolveSlackAccount(params: {
   const accountEnabled = merged.enabled !== false;
   const enabled = baseEnabled && accountEnabled;
   const allowEnv = accountId === DEFAULT_ACCOUNT_ID;
+
+  // Try user-specific OAuth token from workspace
+  let userBotToken: string | undefined;
+  if (params.uid) {
+    try {
+      const workspaceBase = resolveDefaultAgentWorkspaceDir();
+      const userWorkspace = path.join(workspaceBase, `workspace-user-${params.uid}`);
+      const tokenPath = path.join(userWorkspace, ".oauth-tokens.json");
+      if (fs.existsSync(tokenPath)) {
+        const tokens = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
+        if (tokens.slack?.access_token) {
+          userBotToken = tokens.slack.access_token;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const envBot = allowEnv ? resolveSlackBotToken(process.env.SLACK_BOT_TOKEN) : undefined;
   const envApp = allowEnv ? resolveSlackAppToken(process.env.SLACK_APP_TOKEN) : undefined;
   const configBot = resolveSlackBotToken(merged.botToken);
   const configApp = resolveSlackAppToken(merged.appToken);
-  const botToken = configBot ?? envBot;
+  const botToken = userBotToken ?? configBot ?? envBot;
   const appToken = configApp ?? envApp;
-  const botTokenSource: SlackTokenSource = configBot ? "config" : envBot ? "env" : "none";
+  const botTokenSource: SlackTokenSource = userBotToken
+    ? "user"
+    : configBot
+      ? "config"
+      : envBot
+        ? "env"
+        : "none";
   const appTokenSource: SlackTokenSource = configApp ? "config" : envApp ? "env" : "none";
 
   return {

@@ -67,10 +67,11 @@ export const googlechatMessageActions: ChannelMessageActionAdapter = {
   extractToolSend: ({ args }) => {
     return extractToolSend(args, "sendMessage");
   },
-  handleAction: async ({ action, params, cfg, accountId }) => {
+  handleAction: async ({ action, params, cfg, accountId, toolContext }) => {
     const account = resolveGoogleChatAccount({
       cfg: cfg,
       accountId,
+      uid: toolContext?.agentAccountId,
     });
     if (account.credentialSource === "none") {
       throw new Error("Google Chat credentials are missing.");

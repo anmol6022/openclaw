@@ -1,5 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { OpenClawConfig } from "openclaw/plugin-sdk";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
+import { resolveDefaultAgentWorkspaceDir } from "../../../src/agents/workspace.js";
 import type { GoogleChatAccountConfig } from "./types.config.js";
 
 export type GoogleChatCredentialSource = "file" | "inline" | "env" | "none";
@@ -121,8 +124,41 @@ function resolveCredentialsFromConfig(params: {
 export function resolveGoogleChatAccount(params: {
   cfg: OpenClawConfig;
   accountId?: string | null;
+  uid?: string | null;
 }): ResolvedGoogleChatAccount {
   const accountId = normalizeAccountId(params.accountId);
+
+  // Check for specialized user-specific OAuth tokens in the workspace
+  const uid = params.uid?.trim();
+  if (uid) {
+    const workspaceDir = resolveDefaultAgentWorkspaceDir();
+    const userWorkspaceDir = path.join(workspaceDir, `workspace-user-${uid}`);
+    const tokenPath = path.join(userWorkspaceDir, ".oauth-tokens.json");
+    if (fs.existsSync(tokenPath)) {
+      try {
+        const tokens = JSON.parse(fs.readFileSync(tokenPath, "utf-8"));
+        const googleTokens = tokens.google;
+        if (googleTokens && (googleTokens.serviceAccount || googleTokens.accessToken)) {
+          const config = mergeGoogleChatAccountConfig(params.cfg, accountId);
+          const serviceAccount = googleTokens.serviceAccount;
+          const credentials = serviceAccount ? parseServiceAccount(serviceAccount) : null;
+          if (credentials) {
+            return {
+              accountId,
+              name: config.name?.trim() || undefined,
+              enabled: true,
+              config,
+              credentialSource: "file" as const, // Treat it as file-sourced (from workspace)
+              credentials: credentials as Record<string, unknown>,
+            };
+          }
+        }
+      } catch {
+        // Fallback to default config on error
+      }
+    }
+  }
+
   const baseEnabled = params.cfg.channels?.["googlechat"]?.enabled !== false;
   const merged = mergeGoogleChatAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;

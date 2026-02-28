@@ -41,6 +41,8 @@ export type SlackActionContext = {
   replyToMode?: "off" | "first" | "all";
   /** Mutable ref to track if a reply was sent (for "first" mode). */
   hasRepliedRef?: { value: boolean };
+  /** Resolved account ID (UID) for user-specific tool operations. */
+  agentAccountId?: string;
 };
 
 /**
@@ -102,7 +104,7 @@ export async function handleSlackAction(
     );
   const action = readStringParam(params, "action", { required: true });
   const accountId = readStringParam(params, "accountId");
-  const account = resolveSlackAccount({ cfg, accountId });
+  const account = resolveSlackAccount({ cfg, accountId, uid: context?.agentAccountId });
   const actionConfig = account.actions ?? cfg.channels?.slack?.actions;
   const isActionEnabled = createActionGate(actionConfig);
   const userToken = account.config.userToken?.trim() || undefined;
